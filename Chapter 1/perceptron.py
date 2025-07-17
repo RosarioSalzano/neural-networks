@@ -1,4 +1,3 @@
-from  random import random
 import numpy as np
 
 #activation function that will be used
@@ -9,23 +8,21 @@ def sign(x):
         sign=-1
     return sign
 #We will assume that data ara ndarray
-#(x_val, y_val) will be used when early_stopping=True
-class perceptron:
-    def __init__(self, x_train, y_train, x_val=None, y_val=None,
-                  w=None, bias=True, rand_w_init=True, early_stopping=False, learning_rate=1):
+class Perceptron:
+    def __init__(self, x_train, y_train, x_val=None, y_val=None, w=None, bias=True, rand_w_init=True):
         #...
-        if type(x_train).__name__!='ndarray' or x_train.ndim!=2: #it also has to be done and x _val
-            pass
-        if len(y_train)!=x_train.shape[0]   :#it also has to be done for x_val
-            pass
-        if w!=None and type(x_train).__name__!='ndarray' and w.ndim!=1 and  w.shape[0]!=x_train.shape[1]:
-            pass
-        if w!=None and rand_w_init==True:
-            #it will be managed as a warning, saying that w will be used
-            pass
-        if w==None and rand_w_init==False:
-            #it will be managed as a warning, saying that random weights will be used
-            pass
+        # if type(x_train).__name__!='ndarray' or x_train.ndim!=2: #it also has to be done and x _val
+        #     pass
+        # if len(y_train)!=x_train.shape[0]   :#it also has to be done for x_val
+        #     pass
+        # if w!=None and type(x_train).__name__!='ndarray' and w.ndim!=1 and  w.shape[0]!=x_train.shape[1]:
+        #     pass
+        # if w!=None and rand_w_init==True:
+        #     #it will be managed as a warning, saying that w will be used
+        #     pass
+        # if w==None and rand_w_init==False:
+        #     #it will be managed as a warning, saying that random weights will be used
+        #     pass
         #...ERRORS THAT WILL BE DISCUSSED (AS ATTRIBUTES CONVALIDATION) AT THE END
         if bias:
             #add 1 as last (after also for weight) element of each row in x_train and x_val
@@ -44,10 +41,11 @@ class perceptron:
             else: 
                 self.w=w
         if rand_w_init and w==None:
-            w=[random()*2-1 for i in range(self.n_features)]
             #if rand_w_init is initialized as True the components of w_0 will be in [-1,1]
+            w=np.random.random(self.n_features)
+            w=w*2-np.ones(self.n_features)
             if bias:
-                w.append(random()*2-1)
+                w=np.append(w, np.random.random()*2-1)
                 #last element of the list is the bias
             self.w=np.array(w)
         self.w_epoch=np.array([self.w])#there will be all the weights at the end of each epoch and is initialized as 
@@ -56,9 +54,11 @@ class perceptron:
             self.error_val=[np.inf]#there will be the error on the valid set at each epoch (the first element is necessary 
                                     #for the early stopping)
         self.error_train=[self.test_sample(self.x_train, self.y_train)]#there will be the error on the training set at each epoch
-        self.early_stopping=early_stopping
-        self.learning_rate=learning_rate
-    def train(self, epoch):
+    def train(self, epoch=10, hinge=False, early_stopping=False, learning_rate=1):
+        if hinge:
+            threshold=-1
+        else:
+            threshold=0
         #in this perceptron batch_size=1, so each epoch corresponds to having seen n example, where n=x_train.shape[0]
         #IMPORTANT: at each epoch it's not garanteed that each example of the train will be drawn, but probably some 
                     #example will be drawn multiple times
@@ -67,23 +67,29 @@ class perceptron:
         for i in range(epoch):
             perm=np.random.permutation(to_be_perm)#order on how i-epoch see the examples of the training set
             for j in perm:
-                error_example=self.predict_one(self.x_train[j])-self.y_train[j]
-                if error_example!=0:
-                    self.update_weight(j)
-            self.w_epoch=np.append(self.w_epoch, self.w, axis=0)
+                #error_example=self.predict_one(self.x_train[j])-self.y_train[j]
+                loss=-self.y_train[j]*np.sum(np.multiply(self.x_train[j], self.w))
+                #the examples of the training set that are not well predicted in nn are the same that give a LOSS
+                #(perceptron criterion: L_i=max{0, -y_i_true*(w*X_i)}) greater than zero
+                #if hinge loss (L_i=max{0, -y_i_true*(w*X_i)})is used insted of perceptron criterion, update formula 
+                #for weight doesn't change, but probably the examples that generate an update are different
+                if loss>threshold:
+                    self.update_weight(j, learning_rate)
+            self.w_epoch=np.append(self.w_epoch, np.array(self.w), axis=0)
             error_train_epoch=self.test_sample(self.x_train,self.y_train)#get error on train at the end of epoch...
-            self.error_train.append[error_train_epoch]#...and store it
-            error_val_epoch=self.test_sample(self.x_val,self.y_val)
-            self.error_val.append(error_val_epoch)
+            self.error_train.append(error_train_epoch)#...and store it
+            if self.x_val!=None:
+                error_val_epoch=self.test_sample(self.x_val,self.y_val)
+                self.error_val.append(error_val_epoch)
             #EARLY STOPPING: training will be stopped when at the end of an epoch the error on the validation set is 
             #greater than the error at the end of the previously epoch (the weight trained at the end of
             #previously epoch will be selected, saved in w_epoch). Error will be initialized as np.inf
             #such that error after the first epoch will be forced to be lower than it
-            if self.early_stopping and self.error_val[-1]>=self.error_val[-2]:
+            if early_stopping and self.error_val[-1]>=self.error_val[-2]:
                 self.w=self.w_epoch[-2]
                 break
-    def update_weight(self, i):
-        self.w=self.w+self.learning_rate*self.x_train[i]*self.y_train[i]
+    def update_weight(self, i, learning_rate):
+        self.w=self.w+learning_rate*self.x_train[i]*self.y_train[i]
     def predict_one(self, x):
         prediction=sign(np.sum(np.multiply(x, self.w)))
         return prediction
