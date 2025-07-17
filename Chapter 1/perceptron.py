@@ -1,5 +1,6 @@
+#-----------------------PERCEPTRON IMPLEMENTATION-------------------------------
+#i've left something, but in the comment there are details about different point
 import numpy as np
-
 #activation function that will be used
 def sign(x):
     if x>=0:
@@ -8,6 +9,7 @@ def sign(x):
         sign=-1
     return sign
 #We will assume that data ara ndarray
+#ONLY EARLY STOPPING AS REGULARIZATION
 class Perceptron:
     def __init__(self, x_train, y_train, x_val=None, y_val=None, w=None, bias=True, rand_w_init=True):
         #...
@@ -24,17 +26,18 @@ class Perceptron:
         #     #it will be managed as a warning, saying that random weights will be used
         #     pass
         #...ERRORS THAT WILL BE DISCUSSED (AS ATTRIBUTES CONVALIDATION) AT THE END
+        self.n_sample_train=x_train.shape[0]
+        self.n_features=x_train.shape[1]
         if bias:
             #add 1 as last (after also for weight) element of each row in x_train and x_val
             x_train = np.column_stack([x_train, np.ones(x_train.shape[0])])
             if x_val!=None:
                 x_val = np.column_stack([x_val, np.ones(x_val.shape[0])])
+        self.bias=bias
         self.x_train=x_train
         self.x_val=x_val
         self.y_train=y_train
         self.y_val=y_val
-        self.n_sample_train=self.x_train.shape[0]
-        self.n_features=self.x_train.shape[1]
         if w!=None:
             if bias:
                 self.w=np.append(w,1)
@@ -75,7 +78,7 @@ class Perceptron:
                 #for weight doesn't change, but probably the examples that generate an update are different
                 if loss>threshold:
                     self.update_weight(j, learning_rate)
-            self.w_epoch=np.append(self.w_epoch, np.array(self.w), axis=0)
+            self.w_epoch=np.append(self.w_epoch, np.array([self.w]), axis=0)
             error_train_epoch=self.test_sample(self.x_train,self.y_train)#get error on train at the end of epoch...
             self.error_train.append(error_train_epoch)#...and store it
             if self.x_val!=None:
@@ -94,10 +97,12 @@ class Perceptron:
         prediction=sign(np.sum(np.multiply(x, self.w)))
         return prediction
     def predict_more(self, x_s):
+        if self.bias and x_s.shape[1]!=self.n_features+1:
+            x_s = np.column_stack([x_s, np.ones(x_s.shape[0])])
         predictions=np.apply_along_axis(self.predict_one, axis=1, arr=x_s)
         return predictions
     def test_sample(self, x_sample, y_sample):
-        if self.bias and x_sample.shape[1]!=self.n_features:
+        if self.bias and x_sample.shape[1]!=self.n_features+1:
             x_sample = np.column_stack([x_sample, np.ones(x_sample.shape[0])])
-        error=np.sum(np.ones(x_sample[0])-np.multiply(self.predict_more(x_sample), y_sample))
+        error=np.sum(np.ones(x_sample.shape[0])-np.multiply(self.predict_more(x_sample), y_sample))
         return error
