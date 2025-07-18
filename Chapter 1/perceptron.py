@@ -74,7 +74,7 @@ class Perceptron:
                 loss=-self.y_train[j]*np.sum(np.multiply(self.x_train[j], self.w))
                 #the examples of the training set that are not well predicted in nn are the same that give a LOSS
                 #(perceptron criterion: L_i=max{0, -y_i_true*(w*X_i)}) greater than zero
-                #if hinge loss (L_i=max{0, -y_i_true*(w*X_i)})is used insted of perceptron criterion, update formula 
+                #if hinge loss (L_i=max{0, -y_i_true*(w*X_i)})is used instead of perceptron criterion, update formula 
                 #for weight doesn't change, but probably the examples that generate an update are different
                 if loss>threshold:
                     self.update_weight(j, learning_rate)
